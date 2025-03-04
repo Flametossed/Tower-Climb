@@ -1,7 +1,7 @@
 const canvas = document.createElement("canvas");
 document.body.appendChild(canvas);
 const ctx = canvas.getContext("2d");
-canvas.width = 800; // Increased width to 2x
+canvas.width = 1800; // Increased width to 2x
 canvas.height = 600;
 
 document.body.style.margin = "0";
