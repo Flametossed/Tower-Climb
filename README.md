@@ -11,3 +11,5 @@ Avoid red moving obstacles.
 Reach the 100th floor to win.
 
 If you touch an obstacle, you lose!
+
+Game can be played at https://flametossed.github.io/Tower-Climb/
