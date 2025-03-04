@@ -20,7 +20,7 @@ document.addEventListener("keyup", (e) => (keys[e.key] = false));
 
 // Generate floors and obstacles dynamically
 for (let i = 0; i < 100; i++) {
-    floors.push({ x: 0, y: -i * 100, width: 800, height: 10 }); // Adjusted for new width
+    floors.push({ x: 0, y: -i * 100, width: 1800, height: 10 }); // Adjusted for new width
     if (i % 5 === 0) {
         obstacles.push({ x: Math.random() * 750, y: -i * 100 - 50, width: 50, height: 10, speed: 2, dir: 1 });
     }
