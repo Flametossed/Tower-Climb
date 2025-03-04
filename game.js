@@ -1,13 +1,13 @@
 const canvas = document.createElement("canvas");
 document.body.appendChild(canvas);
 const ctx = canvas.getContext("2d");
-canvas.width = 400;
+canvas.width = 800; // Increased width to 2x
 canvas.height = 600;
 
 document.body.style.margin = "0";
 document.body.style.overflow = "hidden";
 
-const player = { x: 180, y: 500, width: 20, height: 20, speed: 3 };
+const player = { x: 380, y: 500, width: 20, height: 20, speed: 3 };
 const obstacles = [];
 const floors = [];
 let scrollY = 0;
@@ -20,9 +20,9 @@ document.addEventListener("keyup", (e) => (keys[e.key] = false));
 
 // Generate floors and obstacles dynamically
 for (let i = 0; i < 100; i++) {
-    floors.push({ x: 0, y: -i * 100, width: 400, height: 10 });
+    floors.push({ x: 0, y: -i * 100, width: 800, height: 10 }); // Adjusted for new width
     if (i % 5 === 0) {
-        obstacles.push({ x: Math.random() * 350, y: -i * 100 - 50, width: 50, height: 10, speed: 2, dir: 1 });
+        obstacles.push({ x: Math.random() * 750, y: -i * 100 - 50, width: 50, height: 10, speed: 2, dir: 1 });
     }
 }
 
