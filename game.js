@@ -88,3 +88,31 @@ function loop() {
     requestAnimationFrame(loop);
 }
 loop();
+
+
+
+function updateObstacles() {
+    for (let i = 0; i < obstacles.length; i++) {
+        let obstacle = obstacles[i];
+
+        // Ensure dx and dy properties exist
+        if (!("dx" in obstacle) || !("dy" in obstacle)) {
+            obstacle.dx = (Math.random() * 4 - 2); // Random initial X direction (-2 to 2)
+            obstacle.dy = (Math.random() * 4 - 2); // Random initial Y direction (-2 to 2)
+        }
+
+        // Randomly change direction occasionally
+        if (Math.random() < 0.02) { 
+            obstacle.dx = (Math.random() * 4 - 2); // Adjust X direction
+            obstacle.dy = (Math.random() * 4 - 2); // Adjust Y direction
+        }
+
+        // Move obstacle
+        obstacle.x += obstacle.dx;
+        obstacle.y += obstacle.dy;
+
+        // Keep obstacle within bounds and reverse direction on collision
+        if (obstacle.x <= 0 || obstacle.x >= canvas.width) obstacle.dx *= -1;
+        if (obstacle.y <= 0 || obstacle.y >= canvas.height) obstacle.dy *= -1;
+    }
+}
