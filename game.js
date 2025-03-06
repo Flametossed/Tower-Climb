@@ -14,8 +14,8 @@ const spaceship = {
     y: 500, 
     width: 30, 
     height: 40, 
-    speed: 4,
-    thruster: 0 // For animation
+    speed: 5, // Increased from 4
+    thruster: 0
 };
 
 const obstacles = [];
@@ -27,7 +27,6 @@ let totalFloors = 100;
 let gameOver = false;
 let gameStarted = false;
 let gamePaused = false;
-let score = 0;
 
 // Controls - support both WASD and arrow keys
 const keys = {};
@@ -113,31 +112,70 @@ function generateTower() {
         // Add obstacles with increasing frequency and speed as floors increase
         const obstacleChance = Math.min(0.8, 0.3 + (i / totalFloors) * 0.5);
         if (Math.random() < obstacleChance) {
-            // Basic horizontal obstacles
-            const speed = 1 + (i / totalFloors) * 4; // Increase speed with height
-            obstacles.push({ 
-                x: Math.random() * 250 + 50, 
-                y: -i * 200 - 100, 
-                width: 50 + Math.random() * 30, 
-                height: 10, 
-                speed: speed, 
-                dir: Math.random() > 0.5 ? 1 : -1,
-                type: 'horizontal'
-            });
+            // Choose random movement patterns with more variety
+            const movementType = Math.random();
             
-            // Add vertical moving obstacles at higher floors
-            if (i > 20 && Math.random() < 0.3) {
+            if (movementType < 0.4) { // Horizontal obstacles
+                const baseSpeed = 1.5 + (i / totalFloors) * 5; // Increased speed
+                const speed = baseSpeed * (0.8 + Math.random() * 0.4); // Add some variance
+                
+                obstacles.push({ 
+                    x: Math.random() * 250 + 50, 
+                    y: -i * 200 - 100, 
+                    width: 40 + Math.random() * 40, // More width variance
+                    height: 8 + Math.random() * 5, // Height variance
+                    speed: speed, 
+                    dir: Math.random() > 0.5 ? 1 : -1,
+                    type: 'horizontal'
+                });
+            } 
+            else if (movementType < 0.65) { // Vertical oscillating obstacles
+                const baseSpeed = 1.5 + (i / totalFloors) * 3;
+                
                 obstacles.push({ 
                     x: Math.random() * 250 + 50, 
                     y: -i * 200 - 150, 
-                    width: 10, 
-                    height: 40, 
-                    speed: speed * 0.7, 
-                    dir: Math.random() > 0.5 ? 1 : -1,
-                    amplitude: 50 + Math.random() * 50,
+                    width: 8 + Math.random() * 4, 
+                    height: 30 + Math.random() * 30, 
+                    speed: baseSpeed * 0.8, 
+                    amplitude: 40 + Math.random() * 80, // Increased amplitude variance
                     initialY: -i * 200 - 150,
                     phase: Math.random() * Math.PI * 2,
+                    phaseSpeed: 0.01 + Math.random() * 0.04, // Variable oscillation speed
                     type: 'vertical'
+                });
+            }
+            else if (movementType < 0.8) { // Circular moving obstacles
+                const radius = 20 + Math.random() * 40;
+                const centerX = 150 + Math.random() * 100;
+                const centerY = -i * 200 - 100;
+                const speed = 0.02 + (i / totalFloors) * 0.03;
+                
+                obstacles.push({
+                    x: centerX, 
+                    y: centerY,
+                    centerX: centerX,
+                    centerY: centerY,
+                    radius: radius,
+                    width: 15,
+                    height: 15,
+                    angle: Math.random() * Math.PI * 2,
+                    speed: speed,
+                    type: 'circular'
+                });
+            }
+            else { // Diagonal moving obstacles
+                const size = 15 + Math.random() * 15;
+                obstacles.push({
+                    x: Math.random() * 250 + 50,
+                    y: -i * 200 - 100,
+                    width: size,
+                    height: size,
+                    speedX: (1 + (i / totalFloors) * 2) * (Math.random() > 0.5 ? 1 : -1),
+                    speedY: (0.5 + (i / totalFloors)) * (Math.random() > 0.5 ? 1 : -1),
+                    type: 'diagonal',
+                    minY: -i * 200 - 150,
+                    maxY: -i * 200 - 50
                 });
             }
         }
@@ -150,7 +188,6 @@ function resetGame() {
     spaceship.y = 500;
     scrollY = 0;
     currentFloor = 1;
-    score = 0;
     gameOver = false;
     gameStarted = true;
     gamePaused = false;
@@ -175,12 +212,12 @@ function update() {
     // Keep player in bounds - constrain to tower width with some padding
     spaceship.x = Math.max(60, Math.min(canvas.width - 60 - spaceship.width, spaceship.x));
     
-    // Constant upward scroll to simulate ascent
-    scrollY += 1;
+    // Constant upward scroll to simulate ascent - increased speed
+    scrollY += 1.5; // Increased from 1
     
-    // Additional scroll when moving up
+    // Additional scroll when moving up - increased speed
     if (spaceship.y < 250) {
-        const scrollSpeed = 2;
+        const scrollSpeed = 3; // Increased from 2
         scrollY += scrollSpeed;
         spaceship.y += scrollSpeed;
     }
@@ -188,9 +225,6 @@ function update() {
     // Calculate current floor based on scroll position
     currentFloor = Math.floor(scrollY / 200) + 1;
     currentFloor = Math.min(currentFloor, totalFloors);
-    
-    // Update score based on height
-    score = Math.max(score, currentFloor * 100);
 
     // Move stars for parallax effect
     stars.forEach(star => {
@@ -201,7 +235,7 @@ function update() {
         }
     });
 
-    // Move obstacles
+    // Move obstacles with enhanced movement patterns
     obstacles.forEach(obs => {
         if (obs.type === 'horizontal') {
             // Horizontal movement
@@ -209,10 +243,32 @@ function update() {
             if (obs.x < 60 || obs.x > canvas.width - 60 - obs.width) {
                 obs.dir *= -1;
             }
-        } else if (obs.type === 'vertical') {
-            // Vertical oscillation
+        } 
+        else if (obs.type === 'vertical') {
+            // Vertical oscillation with variable phase speed
             obs.y = obs.initialY + Math.sin(obs.phase) * obs.amplitude;
-            obs.phase += 0.02;
+            obs.phase += obs.phaseSpeed;
+        }
+        else if (obs.type === 'circular') {
+            // Circular movement
+            obs.angle += obs.speed;
+            obs.x = obs.centerX + Math.cos(obs.angle) * obs.radius;
+            obs.y = obs.centerY + Math.sin(obs.angle) * obs.radius;
+        }
+        else if (obs.type === 'diagonal') {
+            // Diagonal movement with bounds
+            obs.x += obs.speedX;
+            obs.y += obs.speedY;
+            
+            // Bounce off walls
+            if (obs.x < 60 || obs.x > canvas.width - 60 - obs.width) {
+                obs.speedX *= -1;
+            }
+            
+            // Bounce off floor limits
+            if (obs.y < obs.minY || obs.y > obs.maxY) {
+                obs.speedY *= -1;
+            }
         }
     });
 
@@ -344,11 +400,27 @@ function draw() {
         }
     });
     
-    // Draw obstacles
+    // Draw obstacles with different colors based on type
     obstacles.forEach(obs => {
         if (obs.y + scrollY > -100 && obs.y + scrollY < canvas.height + 100) {
-            // Draw only obstacles that are visible (performance optimization)
-            ctx.fillStyle = "#f55";
+            // Set colors based on obstacle type for visual variety
+            switch(obs.type) {
+                case 'horizontal':
+                    ctx.fillStyle = "#f55"; // Red
+                    break;
+                case 'vertical':
+                    ctx.fillStyle = "#f95"; // Orange
+                    break;
+                case 'circular':
+                    ctx.fillStyle = "#5f5"; // Green
+                    break;
+                case 'diagonal':
+                    ctx.fillStyle = "#f5f"; // Purple
+                    break;
+                default:
+                    ctx.fillStyle = "#f55";
+            }
+            
             ctx.fillRect(obs.x, obs.y + scrollY, obs.width, obs.height);
         }
     });
@@ -356,11 +428,10 @@ function draw() {
     // Draw player ship
     drawSpaceShip(spaceship.x, spaceship.y);
     
-    // Draw UI
+    // Draw UI - only floor counter now (score removed as requested)
     ctx.fillStyle = "white";
     ctx.font = "16px Arial";
     ctx.fillText(`Floor: ${currentFloor}/${totalFloors}`, 10, 30);
-    ctx.fillText(`Score: ${score}`, 10, 70); // Moved score text lower
     
     // Draw pause button if game is active
     if (gameStarted && !gameOver) {
@@ -389,12 +460,13 @@ function draw() {
         ctx.font = "30px Arial";
         if (currentFloor >= totalFloors) {
             ctx.fillText("Victory!", canvas.width / 2 - 60, canvas.height / 2 - 50);
+            ctx.font = "20px Arial";
+            ctx.fillText(`You reached floor ${totalFloors}!`, canvas.width / 2 - 100, canvas.height / 2);
         } else {
             ctx.fillText("Game Over", canvas.width / 2 - 80, canvas.height / 2 - 50);
+            ctx.font = "20px Arial";
+            ctx.fillText(`You reached floor ${currentFloor}`, canvas.width / 2 - 100, canvas.height / 2);
         }
-        
-        ctx.font = "20px Arial";
-        ctx.fillText(`Final Score: ${score}`, canvas.width / 2 - 70, canvas.height / 2);
         
         // Draw clickable refresh button
         drawRefreshButton();
