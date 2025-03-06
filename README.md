@@ -4,7 +4,7 @@ A simple 2D top-down pixel game where you must climb a tower from floor 1 to 100
 
 How to Play
 
-Use WASD to move your character.
+Use WASD or Arrow keys to move.
 
 Avoid red moving obstacles.
 
