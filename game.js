@@ -15,18 +15,22 @@ const spaceship = {
     width: 30, 
     height: 40, 
     speed: 5, // Increased from 4
-    thruster: 0
+    thruster: 0,
+    aimAngle: 0 // New - for aiming
 };
 
 const obstacles = [];
 const stars = [];
 const floors = [];
+const projectiles = []; // New - array to store bullets
 let scrollY = 0;
 let currentFloor = 1;
 let totalFloors = 100;
 let gameOver = false;
 let gameStarted = false;
 let gamePaused = false;
+let mouseX = 0; // New - track mouse position
+let mouseY = 0; // New - track mouse position
 
 // Controls - support both WASD and arrow keys
 const keys = {};
@@ -42,7 +46,19 @@ document.addEventListener("keydown", (e) => {
 });
 document.addEventListener("keyup", (e) => (keys[e.key] = false));
 
-// Add mouse click listener for buttons
+// Mouse tracking for aiming
+document.addEventListener("mousemove", (e) => {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
+    
+    // Calculate aim angle for spaceship
+    const dx = mouseX - (spaceship.x + spaceship.width/2);
+    const dy = mouseY - (spaceship.y + spaceship.height/2);
+    spaceship.aimAngle = Math.atan2(dy, dx);
+});
+
+// Add mouse click listener for shooting and buttons
 canvas.addEventListener("click", (e) => {
     const rect = canvas.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
@@ -65,9 +81,8 @@ canvas.addEventListener("click", (e) => {
             resetGame();
         }
     }
-    
     // Check if pause button was clicked
-    if (gameStarted && !gameOver) {
+    else if (gameStarted && !gameOver) {
         const pauseBtnX = canvas.width - 50;
         const pauseBtnY = 20;
         const pauseBtnRadius = 15;
@@ -80,8 +95,39 @@ canvas.addEventListener("click", (e) => {
         if (distance <= pauseBtnRadius) {
             gamePaused = !gamePaused;
         }
+        // If not clicking on pause button and game is running, shoot!
+        else if (!gamePaused) {
+            shootProjectile();
+        }
+    }
+    // If game not started yet, click to start
+    else if (!gameStarted) {
+        gameStarted = true;
     }
 });
+
+// Function to shoot projectile
+function shootProjectile() {
+    const speed = 10;
+    const size = 5;
+    
+    // Calculate velocities based on aim angle
+    const velocityX = Math.cos(spaceship.aimAngle) * speed;
+    const velocityY = Math.sin(spaceship.aimAngle) * speed;
+    
+    // Create projectile at center of spaceship
+    const projectile = {
+        x: spaceship.x + spaceship.width/2 - size/2,
+        y: spaceship.y + spaceship.height/2 - size/2,
+        width: size,
+        height: size,
+        velocityX: velocityX,
+        velocityY: velocityY,
+        active: true
+    };
+    
+    projectiles.push(projectile);
+}
 
 // Create background stars
 for (let i = 0; i < 100; i++) {
@@ -126,7 +172,8 @@ function generateTower() {
                     height: 8 + Math.random() * 5, // Height variance
                     speed: speed, 
                     dir: Math.random() > 0.5 ? 1 : -1,
-                    type: 'horizontal'
+                    type: 'horizontal',
+                    health: 1 + Math.floor(i / 20) // Add health based on floor level
                 });
             } 
             else if (movementType < 0.65) { // Vertical oscillating obstacles
@@ -142,7 +189,8 @@ function generateTower() {
                     initialY: -i * 200 - 150,
                     phase: Math.random() * Math.PI * 2,
                     phaseSpeed: 0.01 + Math.random() * 0.04, // Variable oscillation speed
-                    type: 'vertical'
+                    type: 'vertical',
+                    health: 1 + Math.floor(i / 25) // Add health based on floor level
                 });
             }
             else if (movementType < 0.8) { // Circular moving obstacles
@@ -161,7 +209,8 @@ function generateTower() {
                     height: 15,
                     angle: Math.random() * Math.PI * 2,
                     speed: speed,
-                    type: 'circular'
+                    type: 'circular',
+                    health: 1 + Math.floor(i / 15) // Add health based on floor level
                 });
             }
             else { // Diagonal moving obstacles
@@ -175,7 +224,8 @@ function generateTower() {
                     speedY: (0.5 + (i / totalFloors)) * (Math.random() > 0.5 ? 1 : -1),
                     type: 'diagonal',
                     minY: -i * 200 - 150,
-                    maxY: -i * 200 - 50
+                    maxY: -i * 200 - 50,
+                    health: 1 + Math.floor(i / 18) // Add health based on floor level
                 });
             }
         }
@@ -191,6 +241,7 @@ function resetGame() {
     gameOver = false;
     gameStarted = true;
     gamePaused = false;
+    projectiles.length = 0; // Clear projectiles
     generateTower();
 }
 
@@ -272,7 +323,50 @@ function update() {
         }
     });
 
-    // Collision detection
+    // Update projectiles
+    for (let i = projectiles.length - 1; i >= 0; i--) {
+        const proj = projectiles[i];
+        
+        // Move projectile
+        proj.x += proj.velocityX;
+        proj.y += proj.velocityY;
+        
+        // Remove if out of bounds
+        if (
+            proj.x < 0 || 
+            proj.x > canvas.width ||
+            proj.y < 0 || 
+            proj.y > canvas.height
+        ) {
+            projectiles.splice(i, 1);
+            continue;
+        }
+        
+        // Check for collisions with obstacles
+        for (let j = obstacles.length - 1; j >= 0; j--) {
+            const obs = obstacles[j];
+            if (
+                proj.x < obs.x + obs.width &&
+                proj.x + proj.width > obs.x &&
+                proj.y < obs.y + scrollY + obs.height &&
+                proj.y + proj.height > obs.y + scrollY
+            ) {
+                // Decrease obstacle health
+                obs.health--;
+                
+                // Remove obstacle if health is 0
+                if (obs.health <= 0) {
+                    obstacles.splice(j, 1);
+                }
+                
+                // Remove projectile
+                projectiles.splice(i, 1);
+                break;
+            }
+        }
+    }
+
+    // Collision detection with obstacles
     obstacles.forEach(obs => {
         if (
             spaceship.x < obs.x + obs.width &&
@@ -296,6 +390,23 @@ function update() {
 }
 
 function drawSpaceShip(x, y) {
+    // Save context for rotation
+    ctx.save();
+    
+    // Translate to the center of the spaceship
+    ctx.translate(x + 15, y + 15);
+    
+    // Draw aiming line
+    ctx.strokeStyle = "#5f5";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(spaceship.aimAngle) * 20, Math.sin(spaceship.aimAngle) * 20);
+    ctx.stroke();
+    
+    // Reset the translation to draw the spaceship in its original position
+    ctx.restore();
+    
     // Draw spaceship body
     ctx.fillStyle = "#39f";
     ctx.beginPath();
@@ -329,6 +440,13 @@ function drawSpaceShip(x, y) {
         ctx.closePath();
         ctx.fill();
     }
+}
+
+function drawProjectiles() {
+    ctx.fillStyle = "#ff0";
+    projectiles.forEach(proj => {
+        ctx.fillRect(proj.x, proj.y, proj.width, proj.height);
+    });
 }
 
 function drawPauseButton() {
@@ -422,8 +540,18 @@ function draw() {
             }
             
             ctx.fillRect(obs.x, obs.y + scrollY, obs.width, obs.height);
+            
+            // Draw health if more than 1
+            if (obs.health > 1) {
+                ctx.fillStyle = "#fff";
+                ctx.font = "10px Arial";
+                ctx.fillText(obs.health, obs.x + obs.width/2 - 3, obs.y + scrollY + obs.height/2 + 3);
+            }
         }
     });
+    
+    // Draw projectiles
+    drawProjectiles();
     
     // Draw player ship
     drawSpaceShip(spaceship.x, spaceship.y);
@@ -432,6 +560,13 @@ function draw() {
     ctx.fillStyle = "white";
     ctx.font = "16px Arial";
     ctx.fillText(`Floor: ${currentFloor}/${totalFloors}`, 10, 30);
+    
+    // Mouse controls info
+    if (gameStarted && !gameOver && !gamePaused) {
+        ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+        ctx.font = "12px Arial";
+        ctx.fillText("Aim with mouse, click to shoot", 10, canvas.height - 10);
+    }
     
     // Draw pause button if game is active
     if (gameStarted && !gameOver) {
@@ -484,6 +619,7 @@ function draw() {
         ctx.font = "16px Arial";
         ctx.fillText("Use WASD or Arrow Keys to control", canvas.width / 2 - 120, canvas.height / 2);
         ctx.fillText("Press W or Up to start", canvas.width / 2 - 80, canvas.height / 2 + 40);
+        ctx.fillText("Mouse to aim, click to shoot", canvas.width / 2 - 90, canvas.height / 2 + 70);
     }
 }
 
